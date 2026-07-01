@@ -7,6 +7,8 @@ export type SearchState = {
   query: string;
 };
 
+export type ViewerMode = "tree" | "text";
+
 export type JsonValueType =
   | "object"
   | "array"
@@ -43,6 +45,18 @@ export type JsonGraph = {
 export type SearchIndex = {
   ancestorMatchIds: Set<NodeId>;
   directMatchIds: Set<NodeId>;
+  matchCount: number;
+};
+
+export type DiffEntry = {
+  kind: "added" | "changed" | "removed";
+  path: string;
+};
+
+export type DiffIndex = {
+  ancestorIds: Set<NodeId>;
+  changedIds: Set<NodeId>;
+  entries: DiffEntry[];
   matchCount: number;
 };
 
@@ -279,6 +293,38 @@ export const buildSearchIndex = (
   };
 };
 
+export const buildDiffIndex = (
+  graph: JsonGraph | null,
+  currentValue: unknown,
+  baselineValue: unknown,
+): DiffIndex => {
+  const entries = buildDiffEntries(currentValue, baselineValue);
+  const changedIds = new Set<NodeId>();
+  const ancestorIds = new Set<NodeId>();
+
+  entries.forEach(({ path }) => {
+    const normalizedPath = path || "root";
+
+    if (graph?.nodeById.has(normalizedPath)) {
+      changedIds.add(normalizedPath);
+    }
+
+    let ancestorPath = getParentPath(normalizedPath);
+
+    while (ancestorPath) {
+      ancestorIds.add(ancestorPath);
+      ancestorPath = getParentPath(ancestorPath);
+    }
+  });
+
+  return {
+    ancestorIds,
+    changedIds,
+    entries,
+    matchCount: entries.length,
+  };
+};
+
 export const buildVisibleTreeRows = (
   graph: JsonGraph,
   collapsedIds: Set<NodeId>,
@@ -367,3 +413,108 @@ export const isLargeGraph = (
 
 const normalizePath = (path: string): string =>
   path.trim().toLowerCase().replace(/^root\.?/, "");
+
+const buildDiffEntries = (
+  currentValue: unknown,
+  baselineValue: unknown,
+  path = "root",
+): DiffEntry[] => {
+  if (Object.is(currentValue, baselineValue)) {
+    return [];
+  }
+
+  const currentType = getValueType(currentValue);
+  const baselineType = getValueType(baselineValue);
+
+  if (currentType !== baselineType) {
+    return [{ kind: "changed", path }];
+  }
+
+  if (currentType === "array") {
+    const currentArray = currentValue as unknown[];
+    const baselineArray = baselineValue as unknown[];
+    const entries: DiffEntry[] = [];
+
+    if (currentArray.length !== baselineArray.length) {
+      entries.push({ kind: "changed", path });
+    }
+
+    const maxLength = Math.max(currentArray.length, baselineArray.length);
+
+    for (let index = 0; index < maxLength; index += 1) {
+      const childPath = `${path}[${index}]`;
+
+      if (index >= baselineArray.length) {
+        entries.push({ kind: "added", path: childPath });
+        continue;
+      }
+
+      if (index >= currentArray.length) {
+        entries.push({ kind: "removed", path: childPath });
+        continue;
+      }
+
+      entries.push(...buildDiffEntries(currentArray[index], baselineArray[index], childPath));
+    }
+
+    return dedupeDiffEntries(entries);
+  }
+
+  if (currentType === "object") {
+    const currentObject = currentValue as Record<string, unknown>;
+    const baselineObject = baselineValue as Record<string, unknown>;
+    const entries: DiffEntry[] = [];
+    const keys = new Set([...Object.keys(currentObject), ...Object.keys(baselineObject)]);
+
+    keys.forEach((key) => {
+      const childPath = `${path}.${key}`;
+
+      if (!(key in baselineObject)) {
+        entries.push({ kind: "added", path: childPath });
+        return;
+      }
+
+      if (!(key in currentObject)) {
+        entries.push({ kind: "removed", path: childPath });
+        return;
+      }
+
+      entries.push(...buildDiffEntries(currentObject[key], baselineObject[key], childPath));
+    });
+
+    return dedupeDiffEntries(entries);
+  }
+
+  return [{ kind: "changed", path }];
+};
+
+const dedupeDiffEntries = (entries: DiffEntry[]): DiffEntry[] => {
+  const seen = new Set<string>();
+
+  return entries.filter((entry) => {
+    const key = `${entry.kind}:${entry.path}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+};
+
+const getParentPath = (path: string): string | null => {
+  if (path === "root") {
+    return null;
+  }
+
+  const lastArrayIndex = path.lastIndexOf("[");
+  const lastObjectIndex = path.lastIndexOf(".");
+  const separatorIndex = Math.max(lastArrayIndex, lastObjectIndex);
+
+  if (separatorIndex <= "root".length - 1) {
+    return "root";
+  }
+
+  return path.slice(0, separatorIndex);
+};

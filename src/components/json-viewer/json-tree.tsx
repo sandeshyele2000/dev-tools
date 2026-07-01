@@ -4,6 +4,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { JsonNode } from "@/components/json-viewer/json-node";
 import {
   buildVisibleTreeRows,
+  type DiffIndex,
   type JsonGraph,
   type JsonNodeRecord,
   type SearchIndex,
@@ -17,6 +18,7 @@ const VIRTUALIZATION_THRESHOLD = 250;
 
 type JsonTreeProps = {
   collapsedIds: Set<string>;
+  diffIndex: DiffIndex;
   graph: JsonGraph;
   onTogglePath: (path: string) => void;
   searchState: SearchState;
@@ -25,6 +27,7 @@ type JsonTreeProps = {
 
 export const JsonTree = ({
   collapsedIds,
+  diffIndex,
   graph,
   onTogglePath,
   searchState,
@@ -78,7 +81,7 @@ export const JsonTree = ({
   return (
     <div
       ref={containerRef}
-      className="json-tree"
+      className="h-full min-w-max overflow-auto"
       onScroll={
         shouldVirtualize
           ? (event) => setScrollTop(event.currentTarget.scrollTop)
@@ -87,17 +90,18 @@ export const JsonTree = ({
     >
       {shouldVirtualize ? (
         <div
-          className="json-tree-virtual"
+          className="relative min-w-max"
           style={{ height: `${rows.length * ROW_HEIGHT}px` }}
         >
           <div
-            className="json-tree-window"
+            className="absolute inset-x-0 top-0"
             style={{ transform: `translateY(${offsetTop}px)` }}
           >
             {visibleRows.map((row) => (
               <TreeRow
                 key={row.id}
                 collapsedIds={collapsedIds}
+                diffIndex={diffIndex}
                 graph={graph}
                 onTogglePath={onTogglePath}
                 row={row}
@@ -112,6 +116,7 @@ export const JsonTree = ({
           <TreeRow
             key={row.id}
             collapsedIds={collapsedIds}
+            diffIndex={diffIndex}
             graph={graph}
             onTogglePath={onTogglePath}
             row={row}
@@ -126,6 +131,7 @@ export const JsonTree = ({
 
 type TreeRowProps = {
   collapsedIds: Set<string>;
+  diffIndex: DiffIndex;
   graph: JsonGraph;
   onTogglePath: (path: string) => void;
   row: VisibleTreeRow;
@@ -136,6 +142,7 @@ type TreeRowProps = {
 const TreeRow = memo(
   ({
     collapsedIds,
+    diffIndex,
     graph,
     onTogglePath,
     row,
@@ -151,6 +158,7 @@ const TreeRow = memo(
     return (
       <JsonNode
         collapsedIds={collapsedIds}
+        diffIndex={diffIndex}
         node={node}
         onTogglePath={onTogglePath}
         searchIndex={searchIndex}

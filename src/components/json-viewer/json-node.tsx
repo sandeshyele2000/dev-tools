@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
 import {
+  type DiffIndex,
   getPathLabel,
   splitMatches,
   type JsonNodeRecord,
@@ -9,6 +10,7 @@ import {
 
 type JsonNodeProps = {
   collapsedIds: Set<string>;
+  diffIndex: DiffIndex;
   node: JsonNodeRecord;
   onTogglePath: (path: string) => void;
   searchIndex: SearchIndex;
@@ -16,35 +18,48 @@ type JsonNodeProps = {
 };
 
 export const JsonNode = memo(
-  ({ collapsedIds, node, onTogglePath, searchIndex, searchState }: JsonNodeProps) => {
+  ({
+    collapsedIds,
+    diffIndex,
+    node,
+    onTogglePath,
+    searchIndex,
+    searchState,
+  }: JsonNodeProps) => {
     const isCollapsed = collapsedIds.has(node.id);
     const hasSearch = searchState.query.length > 0;
     const nodeMatch = searchIndex.directMatchIds.has(node.id);
     const descendantMatch = searchIndex.ancestorMatchIds.has(node.id);
     const shouldShowContext = hasSearch && !nodeMatch && descendantMatch;
+    const nodeChanged = diffIndex.changedIds.has(node.id);
+    const ancestorChanged = diffIndex.ancestorIds.has(node.id);
+    const rowClassName = [
+      "flex min-h-[38px] items-center gap-2 border-l-2 border-transparent pr-4 text-base hover:bg-hover-panel",
+      nodeMatch ? "border-l-accent bg-accent-panel" : "",
+      shouldShowContext ? "border-l-accent-border bg-accent-subtle" : "",
+      nodeChanged ? "border-l-warn bg-warn-panel" : "",
+      ancestorChanged && !nodeChanged ? "border-l-warn-border bg-warn-subtle" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return (
-      <div className="tree-node">
-        <div
-          className={`tree-row ${nodeMatch ? "tree-row-match" : ""} ${
-            shouldShowContext ? "tree-row-context" : ""
-          }`}
-          style={{ paddingLeft: `${node.depth * 20}px` }}
-        >
+      <div className="border-b border-b-border-muted">
+        <div className={rowClassName} style={{ paddingLeft: `${node.depth * 20}px` }}>
           {node.expandable ? (
             <button
               type="button"
-              className="toggle-button"
+              className="h-6 min-h-6 w-6 min-w-6 border border-border-default bg-background text-foreground hover:border-accent-border hover:text-accent"
               onClick={() => onTogglePath(node.id)}
               aria-label={isCollapsed ? "Expand node" : "Collapse node"}
             >
               {isCollapsed ? "+" : "-"}
             </button>
           ) : (
-            <span className="toggle-spacer" />
+            <span className="inline-block h-6 w-6 min-w-6" />
           )}
 
-          <span className="node-key">
+          <span className="font-mono text-foreground">
             <HighlightedText
               text={String(node.key)}
               query={searchState.query}
@@ -52,15 +67,21 @@ export const JsonNode = memo(
             />
           </span>
 
-          <span className="node-separator">:</span>
+          <span className="font-mono text-muted">:</span>
 
           {node.expandable ? (
-            <span className="node-summary">
+            <span className="font-mono text-muted">
               {node.summary}
               {node.childCount > 0 ? ` ${isCollapsed ? "collapsed" : "open"}` : ""}
             </span>
           ) : (
-            <span className={`node-value node-value-${node.type}`}>
+            <span
+              className={`font-mono ${
+                node.type === "string"
+                  ? "text-foreground"
+                  : "text-muted-soft"
+              }`}
+            >
               <HighlightedText
                 text={node.primitiveDisplay}
                 query={searchState.query}
@@ -69,7 +90,7 @@ export const JsonNode = memo(
             </span>
           )}
 
-          <span className="node-path">
+          <span className="ml-auto font-mono text-xs text-muted">
             <HighlightedText
               text={getPathLabel(node.path)}
               query={searchState.query}
@@ -104,7 +125,10 @@ const HighlightedText = memo(
       <>
         {parts.map((part, index) =>
           part.match ? (
-            <mark key={`${part.value}-${index}`} className="search-highlight">
+            <mark
+              key={`${part.value}-${index}`}
+              className="bg-accent-soft px-0 text-accent"
+            >
               {part.value}
             </mark>
           ) : (
