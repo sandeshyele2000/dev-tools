@@ -18,6 +18,7 @@ import {
   buildSearchIndex,
   buildRootCollapsedSet,
   createSearchState,
+  getValueAtPath,
   isLargeGraph,
   parseJsonInput,
   type DiffIndex,
@@ -203,6 +204,21 @@ export const JsonWorkbench = () => {
     toast.error(message);
   };
 
+  const writeClipboard = async (
+    value: unknown,
+    options: {
+      failureMessage: string;
+      successMessage: string;
+    },
+  ) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(value, null, 2));
+      showToast(options.successMessage, "success");
+    } catch {
+      showToast(options.failureMessage, "error");
+    }
+  };
+
   const handleLeftInputChange = (value: string) => {
     left.setInput(value);
   };
@@ -225,6 +241,54 @@ export const JsonWorkbench = () => {
     }
 
     handleRightInputChange(JSON.stringify(right.parsed.value, null, 2));
+  };
+
+  const handleCopyLeftDocument = () => {
+    if (!left.parsed.valid) {
+      return;
+    }
+
+    void writeClipboard(left.parsed.value, {
+      failureMessage: "Could not copy the left JSON to the clipboard.",
+      successMessage: "Left JSON copied.",
+    });
+  };
+
+  const handleCopyRightDocument = () => {
+    if (!right.parsed.valid) {
+      return;
+    }
+
+    void writeClipboard(right.parsed.value, {
+      failureMessage: "Could not copy the right JSON to the clipboard.",
+      successMessage: "Right JSON copied.",
+    });
+  };
+
+  const handleCopyLeftNode = (path: string) => {
+    if (!left.parsed.valid) {
+      return;
+    }
+
+    const value = getValueAtPath(left.parsed.value, path);
+
+    void writeClipboard(value, {
+      failureMessage: `Could not copy ${path} to the clipboard.`,
+      successMessage: `Copied ${path}.`,
+    });
+  };
+
+  const handleCopyRightNode = (path: string) => {
+    if (!right.parsed.valid) {
+      return;
+    }
+
+    const value = getValueAtPath(right.parsed.value, path);
+
+    void writeClipboard(value, {
+      failureMessage: `Could not copy ${path} to the clipboard.`,
+      successMessage: `Copied ${path}.`,
+    });
   };
 
   const handleCollapseAll = () => {
@@ -456,8 +520,11 @@ export const JsonWorkbench = () => {
 
           <section className="grid grid-cols-[minmax(0,1fr)_160px_minmax(0,1fr)] items-stretch gap-4 max-[720px]:grid-cols-1">
             <JsonComparePanel
+              copyLabel="Copy left"
               document={left}
               diffIndex={leftDiffIndex}
+              onCopyDocument={handleCopyLeftDocument}
+              onCopyNode={handleCopyLeftNode}
               searchIndex={leftSearchIndex}
               searchState={leftSearchState}
               viewerMode={viewerMode}
@@ -530,8 +597,11 @@ export const JsonWorkbench = () => {
             </section>
 
             <JsonComparePanel
+              copyLabel="Copy right"
               document={right}
               diffIndex={rightDiffIndex}
+              onCopyDocument={handleCopyRightDocument}
+              onCopyNode={handleCopyRightNode}
               searchIndex={rightSearchIndex}
               searchState={rightSearchState}
               viewerMode={viewerMode}
@@ -562,9 +632,12 @@ export const JsonWorkbench = () => {
 };
 
 type JsonComparePanelProps = {
+  copyLabel: string;
   document: JsonDocumentState;
   diffIndex: DiffIndex;
+  onCopyDocument: () => void;
   onInputChange: (value: string) => void;
+  onCopyNode: (path: string) => void;
   onSearchModeChange: (mode: "text" | "path") => void;
   onSearchQueryChange: (value: string) => void;
   onTogglePath: (path: string) => void;
@@ -577,9 +650,12 @@ type JsonComparePanelProps = {
 };
 
 const JsonComparePanel = ({
+  copyLabel,
   document,
   diffIndex,
+  onCopyDocument,
   onInputChange,
+  onCopyNode,
   onSearchModeChange,
   onSearchQueryChange,
   onTogglePath,
@@ -598,7 +674,15 @@ const JsonComparePanel = ({
 
   return (
     <section className="flex min-h-[640px] min-w-0 flex-col border border-border-default bg-panel text-base max-[720px]:min-h-0">
-      <div className="flex items-center justify-end border-b border-b-border-default p-4">
+      <div className="flex items-center justify-between gap-3 border-b border-b-border-default p-4">
+        <button
+          type="button"
+          className={BUTTON_CLASS}
+          onClick={onCopyDocument}
+          disabled={!document.parsed.valid}
+        >
+          {copyLabel}
+        </button>
         <div className="flex flex-wrap justify-end gap-2">
           <span className={`${STATUS_BADGE_CLASS} ${statusClassName}`}>
             {document.isParsing ? "Working" : document.parsed.valid ? "Valid" : "Invalid"}
@@ -632,6 +716,7 @@ const JsonComparePanel = ({
                 collapsedIds={document.collapsedIds}
                 diffIndex={diffIndex}
                 graph={document.graph}
+                onCopyNode={onCopyNode}
                 onTogglePath={onTogglePath}
                 searchIndex={searchIndex}
                 searchState={searchState}

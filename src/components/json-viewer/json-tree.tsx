@@ -13,13 +13,14 @@ import {
 } from "@/lib/json-viewer";
 
 const OVERSCAN_ROWS = 12;
-const ROW_HEIGHT = 38;
+const ROW_HEIGHT = 32;
 const VIRTUALIZATION_THRESHOLD = 250;
 
 type JsonTreeProps = {
   collapsedIds: Set<string>;
   diffIndex: DiffIndex;
   graph: JsonGraph;
+  onCopyNode: (path: string) => void;
   onTogglePath: (path: string) => void;
   searchState: SearchState;
   searchIndex: SearchIndex;
@@ -29,6 +30,7 @@ export const JsonTree = ({
   collapsedIds,
   diffIndex,
   graph,
+  onCopyNode,
   onTogglePath,
   searchState,
   searchIndex,
@@ -103,6 +105,7 @@ export const JsonTree = ({
                 collapsedIds={collapsedIds}
                 diffIndex={diffIndex}
                 graph={graph}
+                onCopyNode={onCopyNode}
                 onTogglePath={onTogglePath}
                 row={row}
                 searchIndex={searchIndex}
@@ -118,6 +121,7 @@ export const JsonTree = ({
             collapsedIds={collapsedIds}
             diffIndex={diffIndex}
             graph={graph}
+            onCopyNode={onCopyNode}
             onTogglePath={onTogglePath}
             row={row}
             searchIndex={searchIndex}
@@ -133,6 +137,7 @@ type TreeRowProps = {
   collapsedIds: Set<string>;
   diffIndex: DiffIndex;
   graph: JsonGraph;
+  onCopyNode: (path: string) => void;
   onTogglePath: (path: string) => void;
   row: VisibleTreeRow;
   searchIndex: SearchIndex;
@@ -144,6 +149,7 @@ const TreeRow = memo(
     collapsedIds,
     diffIndex,
     graph,
+    onCopyNode,
     onTogglePath,
     row,
     searchIndex,
@@ -160,7 +166,9 @@ const TreeRow = memo(
         collapsedIds={collapsedIds}
         diffIndex={diffIndex}
         node={node}
+        onCopyNode={onCopyNode}
         onTogglePath={onTogglePath}
+        row={row}
         searchIndex={searchIndex}
         searchState={searchState}
       />

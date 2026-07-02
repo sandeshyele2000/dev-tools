@@ -63,6 +63,7 @@ export type DiffIndex = {
 export type VisibleTreeRow = {
   depth: number;
   id: NodeId;
+  kind: "node" | "closing";
 };
 
 type GraphBuildResult = {
@@ -344,9 +345,10 @@ export const buildVisibleTreeRows = (
     rows.push({
       depth: node.depth,
       id: node.id,
+      kind: "node",
     });
 
-    if (!node.expandable || collapsedIds.has(node.id)) {
+    if (!node.expandable || collapsedIds.has(node.id) || node.childCount === 0) {
       return;
     }
 
@@ -361,6 +363,12 @@ export const buildVisibleTreeRows = (
 
       walk(childId);
     }
+
+    rows.push({
+      depth: node.depth,
+      id: node.id,
+      kind: "closing",
+    });
   };
 
   walk(graph.rootId);
@@ -405,6 +413,36 @@ export const splitMatches = (
 };
 
 export const getPathLabel = (path: string): string => path;
+
+export const getValueAtPath = (rootValue: unknown, path: string): unknown => {
+  if (path === "root") {
+    return rootValue;
+  }
+
+  const segments = path.replace(/^root\.?/, "").match(/[^.[\]]+|\[\d+\]/g) ?? [];
+  let currentValue = rootValue;
+
+  for (const segment of segments) {
+    if (segment.startsWith("[")) {
+      const index = Number(segment.slice(1, -1));
+
+      if (!Array.isArray(currentValue)) {
+        return undefined;
+      }
+
+      currentValue = currentValue[index];
+      continue;
+    }
+
+    if (currentValue === null || typeof currentValue !== "object") {
+      return undefined;
+    }
+
+    currentValue = (currentValue as Record<string, unknown>)[segment];
+  }
+
+  return currentValue;
+};
 
 export const isLargeGraph = (
   graph: JsonGraph,
