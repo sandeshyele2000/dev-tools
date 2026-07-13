@@ -1,3 +1,5 @@
+import { ACTIVE_BUTTON_CLASS } from "@/components/json-viewer/json-ui";
+
 type JsonSearchBarProps = {
   activeMatchNumber: number;
   isBusy: boolean;
@@ -24,7 +26,7 @@ export const JsonSearchBar = ({
   const buttonClassName = (active: boolean) =>
     [
       "rounded-[4px] border border-border-default bg-background px-3 py-2 text-foreground disabled:cursor-not-allowed disabled:text-muted",
-      active ? "border-accent-border text-accent" : "hover:border-accent-border hover:text-accent",
+      active ? ACTIVE_BUTTON_CLASS : "hover:border-accent-border hover:text-accent",
     ].join(" ");
   const matchStatus = isBusy
     ? "Searching..."
@@ -77,7 +79,7 @@ export const JsonSearchBar = ({
         onChange={(event) => onQueryChange(event.target.value)}
         placeholder={
           mode === "text"
-            ? "Search keys or primitive values"
+            ? "Search keys, values, or matching nested object content"
             : "Search paths like users[0].profile.name"
         }
       />

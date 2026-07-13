@@ -76,6 +76,22 @@ export const CompareIcon = ({ className = DEFAULT_ICON_CLASS }: IconProps) => (
   </svg>
 );
 
+export const ArrowUpIcon = ({ className = DEFAULT_ICON_CLASS }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+    <path d="m12 5-6 6" />
+    <path d="m12 5 6 6" />
+    <path d="M12 5v14" />
+  </svg>
+);
+
+export const ArrowDownIcon = ({ className = DEFAULT_ICON_CLASS }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+    <path d="m12 19-6-6" />
+    <path d="m12 19 6-6" />
+    <path d="M12 5v14" />
+  </svg>
+);
+
 export const SunIcon = ({ className = DEFAULT_ICON_CLASS }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
     <circle cx="12" cy="12" r="4" />

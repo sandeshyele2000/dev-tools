@@ -119,6 +119,7 @@ type JsonDocumentController = {
   isSearching: boolean;
   matchCursor: number;
   prettyPrint: () => Promise<void>;
+  revealNode: (nodeId: NodeId) => void;
   searchIndex: SearchIndex;
   searchMode: SearchMode;
   searchQuery: string;
@@ -469,6 +470,7 @@ export const useJsonDocument = (
     isSearching,
     matchCursor,
     prettyPrint,
+    revealNode: revealMatch,
     searchIndex,
     searchMode,
     searchQuery,

@@ -197,10 +197,10 @@ const handleSearchDocument = (message: SearchDocumentMessage) => {
   postMessage({
     requestId: message.requestId,
     type: "search-document-result",
-    value: buildSearchSnapshot(
-      document.graph,
-      createSearchState(message.query, message.mode),
-    ),
+    value:
+      message.mode === "path"
+        ? buildSearchSnapshot(document.graph, createSearchState(message.query, message.mode))
+        : buildTextSearchSnapshot(document.graph, document.value, message.query),
   } satisfies WorkerResponse);
 };
 
@@ -289,4 +289,81 @@ const getValueAtPath = (rootValue: unknown, path: string): unknown => {
   }
 
   return currentValue;
+};
+
+const buildTextSearchSnapshot = (
+  graph: JsonGraph,
+  rootValue: unknown,
+  query: string,
+): SearchSnapshot => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return {
+      ancestorMatchIds: [],
+      directMatchIds: [],
+      matchCount: 0,
+      orderedMatchIds: [],
+    };
+  }
+
+  const directMatchIds = new Set<string>();
+  const ancestorMatchIds = new Set<string>();
+  const subtreeMatchByPath = new Map<string, boolean>();
+
+  const visit = (path: string, value: unknown): boolean => {
+    const node = graph.nodeById[path];
+
+    if (!node) {
+      return false;
+    }
+
+    const selfMatch =
+      node.searchLabelText.includes(normalizedQuery) ||
+      (!node.expandable && node.searchValueText.includes(normalizedQuery));
+    let descendantMatch = false;
+
+    if (Array.isArray(value)) {
+      value.forEach((childValue, index) => {
+        if (visit(`${path}[${index}]`, childValue)) {
+          descendantMatch = true;
+        }
+      });
+    } else if (value !== null && typeof value === "object") {
+      Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) => {
+        if (visit(`${path}.${childKey}`, childValue)) {
+          descendantMatch = true;
+        }
+      });
+    }
+
+    const matches = selfMatch || (node.id !== graph.rootId && descendantMatch);
+    subtreeMatchByPath.set(path, matches);
+    return matches;
+  };
+
+  visit(graph.rootId, rootValue);
+
+  graph.nodeOrder.forEach((path) => {
+    if (!subtreeMatchByPath.get(path)) {
+      return;
+    }
+
+    directMatchIds.add(path);
+    let ancestorId = graph.nodeById[path]?.parentId ?? null;
+
+    while (ancestorId) {
+      ancestorMatchIds.add(ancestorId);
+      ancestorId = graph.nodeById[ancestorId]?.parentId ?? null;
+    }
+  });
+
+  const orderedMatchIds = graph.nodeOrder.filter((path) => directMatchIds.has(path));
+
+  return {
+    ancestorMatchIds: [...ancestorMatchIds],
+    directMatchIds: [...directMatchIds],
+    matchCount: orderedMatchIds.length,
+    orderedMatchIds,
+  };
 };

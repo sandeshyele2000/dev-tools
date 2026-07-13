@@ -13,6 +13,7 @@ import { useJsonDocument } from "@/hooks/use-json-document";
 import type { DiffIndex, ViewerMode } from "@/lib/json-viewer";
 
 type JsonComparePanelProps = {
+  activeDiffId: string | null;
   copyLabel: string;
   diffIndex: DiffIndex;
   document: ReturnType<typeof useJsonDocument>;
@@ -24,6 +25,7 @@ type JsonComparePanelProps = {
 };
 
 export const JsonComparePanel = ({
+  activeDiffId,
   copyLabel,
   diffIndex,
   document,
@@ -43,11 +45,12 @@ export const JsonComparePanel = ({
     : "border-border-invalid text-muted-strong";
   const activeMatchNumber =
     document.matchCursor >= 0 ? document.matchCursor + 1 : 0;
+  const activeNodeId = document.activeMatchId ?? activeDiffId;
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] border border-border-default bg-panel text-base max-[900px]:h-[72vh] max-[720px]:h-[680px]">
       <div className="shrink-0 border-b border-b-border-default p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -67,6 +70,7 @@ export const JsonComparePanel = ({
               <SparklesIcon />
               <span>Pretty</span>
             </button>
+            <JsonViewModeToggle value={viewerMode} onChange={onViewerModeChange} />
             {viewerMode === "tree" ? (
               <>
                 <button
@@ -96,8 +100,6 @@ export const JsonComparePanel = ({
             </span>
           </div>
         </div>
-
-        <JsonViewModeToggle value={viewerMode} onChange={onViewerModeChange} />
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto bg-background">
@@ -134,7 +136,7 @@ export const JsonComparePanel = ({
             />
             <div className="min-h-0 flex-1">
               <JsonTree
-                activeMatchId={document.activeMatchId}
+                activeMatchId={activeNodeId}
                 collapsedIds={document.collapsedIds}
                 diffIndex={diffIndex}
                 graph={document.graph}

@@ -13,4 +13,4 @@ export const BUTTON_CLASS =
 export const ICON_BUTTON_CLASS =
   "inline-flex h-11 w-11 items-center justify-center rounded-[4px] border border-border-default bg-background text-foreground enabled:hover:border-accent-border enabled:hover:text-accent disabled:cursor-not-allowed disabled:text-neutral-500";
 
-export const ACTIVE_BUTTON_CLASS = "border-accent-border bg-accent-panel text-accent";
+export const ACTIVE_BUTTON_CLASS = "border-yellow-600";

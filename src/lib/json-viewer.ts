@@ -360,7 +360,7 @@ export const buildVisibleTreeRows = (
   const rows: VisibleTreeRow[] = [];
   const hasSearch = Boolean(searchState.query);
 
-  const walk = (nodeId: NodeId) => {
+  const walk = (nodeId: NodeId, forceShowAllChildren = false) => {
     const node = graph.nodeById[nodeId];
 
     if (!node) {
@@ -377,20 +377,23 @@ export const buildVisibleTreeRows = (
       return;
     }
 
-    const renderIds = hasSearch
-      ? node.childIds.filter(
-          (childId) =>
-            searchIndex.directMatchIds.has(childId) ||
-            searchIndex.ancestorMatchIds.has(childId),
-        )
-      : node.childIds;
+    const isDirectMatch = searchIndex.directMatchIds.has(node.id);
+    const shouldShowAllChildren = forceShowAllChildren || (hasSearch && isDirectMatch);
+    const renderIds =
+      hasSearch && !shouldShowAllChildren
+        ? node.childIds.filter(
+            (childId) =>
+              searchIndex.directMatchIds.has(childId) ||
+              searchIndex.ancestorMatchIds.has(childId),
+          )
+        : node.childIds;
     const visibleChildCount = isHeavy
       ? visibleChildCountById[node.id] ?? DEFAULT_VISIBLE_CHILDREN
       : renderIds.length;
     const visibleIds = hasSearch ? renderIds : renderIds.slice(0, visibleChildCount);
 
     visibleIds.forEach((childId) => {
-      walk(childId);
+      walk(childId, shouldShowAllChildren);
     });
 
     if (!hasSearch && isHeavy && renderIds.length > visibleIds.length) {

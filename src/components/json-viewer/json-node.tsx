@@ -1,6 +1,5 @@
 import { memo, useMemo } from "react";
 import {
-  getPathLabel,
   splitMatches,
   type DiffIndex,
   type JsonNodeRecord,
@@ -88,7 +87,6 @@ export const JsonNode = memo(
           <Guide depth={row.depth} />
           <span className={getContainerClassName(node.type)}>{getClosingToken(node.type)}</span>
           <span className="text-token-punctuation">{trailingComma}</span>
-          <RowMeta path={node.path} query={searchState.query} enabled={searchState.mode === "path"} />
         </div>
       );
     }
@@ -157,13 +155,11 @@ export const JsonNode = memo(
             type="button"
             className="ml-2 rounded-[4px] border border-border-default px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:border-accent-border hover:text-accent"
             onClick={() => onCopyNode(node.path)}
-            aria-label={`Copy ${getPathLabel(node.path)}`}
+            aria-label={`Copy ${node.path}`}
           >
             Copy
           </button>
         )}
-
-        <RowMeta path={node.path} query={searchState.query} enabled={searchState.mode === "path"} />
       </div>
     );
   },
@@ -234,18 +230,6 @@ const getPrimitiveClassName = (type: JsonNodeRecord["type"]) => {
 
   return "text-token-null";
 };
-
-type RowMetaProps = {
-  enabled: boolean;
-  path: string;
-  query: string;
-};
-
-const RowMeta = ({ enabled, path, query }: RowMetaProps) => (
-  <span className="ml-auto hidden text-[11px] uppercase tracking-[0.2em] text-muted/80 group-hover:inline">
-    <HighlightedText text={getPathLabel(path)} query={query} enabled={enabled} />
-  </span>
-);
 
 type GuideProps = {
   depth: number;

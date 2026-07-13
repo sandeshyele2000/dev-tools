@@ -1,9 +1,12 @@
 JSON Viewer
 
-- Multi session.
-- Mongo document parser
-- copy nested object
+- Mongo document parser [Done]
+- should be able to edit text in any mode, even in tree mode.
+- after compare json, I need to travel to highlighted diff changes same like how highlighted with text search I jump to highlighted items. add buttons up down arrow buttons to jump.
+- show entire object in the text mode search like path mode.
+- shift the modes(tree, compact, text) in the same view/row as pretty copy collapse all open all.
+- remove the identifiction beside copy button which is like on hover shows "ROOT.ITEM.ABC" 
 
-Time Convertor
+Epoch
 
 2D Canvas
