@@ -1,5 +1,5 @@
-import { JsonWorkbench } from "@/components/json-viewer/json-workbench";
+import { DevToolsHome } from "@/components/dev-tools-home";
 
-const Home = () => <JsonWorkbench />;
+const Home = () => <DevToolsHome />;
 
 export default Home;

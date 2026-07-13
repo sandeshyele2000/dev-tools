@@ -8,8 +8,8 @@ const doto = Doto({
 });
 
 export const metadata: Metadata = {
-  title: "JSON Viewer",
-  description: "Parse, inspect, search, and interact with nested JSON.",
+  title: "Dev tools",
+  description: "A collection of developer utilities.",
 };
 
 const RootLayout = ({

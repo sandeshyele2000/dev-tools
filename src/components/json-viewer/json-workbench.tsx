@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { JsonCenterControls } from "@/components/json-viewer/json-center-controls";
 import { JsonComparePanel } from "@/components/json-viewer/json-compare-panel";
-import { JsonThemeToggle, type ThemeMode } from "@/components/json-viewer/json-theme-toggle";
+import { JsonThemeToggle } from "@/components/json-viewer/json-theme-toggle";
 import { STATUS_BADGE_CLASS } from "@/components/json-viewer/json-ui";
 import { useJsonDocument } from "@/hooks/use-json-document";
+import { useThemeMode } from "@/hooks/use-theme-mode";
 import {
   EMPTY_DIFF_INDEX,
   materializeDiffIndex,
@@ -15,7 +16,6 @@ import {
 } from "@/lib/json-viewer";
 
 const EMPTY_JSON_INPUT = "";
-const THEME_STORAGE_KEY = "json-viewer:theme:v1";
 
 type ComparisonPair = {
   left: string;
@@ -25,10 +25,10 @@ type ComparisonPair = {
 export const JsonWorkbench = () => {
   const [leftViewerMode, setLeftViewerMode] = useState<ViewerMode>("tree");
   const [rightViewerMode, setRightViewerMode] = useState<ViewerMode>("tree");
-  const [theme, setTheme] = useState<ThemeMode>("dark");
   const [leftDiffIndex, setLeftDiffIndex] = useState<DiffIndex>(EMPTY_DIFF_INDEX);
   const [rightDiffIndex, setRightDiffIndex] = useState<DiffIndex>(EMPTY_DIFF_INDEX);
   const [comparisonPair, setComparisonPair] = useState<ComparisonPair | null>(null);
+  const { theme, toggleTheme } = useThemeMode();
   const left = useJsonDocument("left", EMPTY_JSON_INPUT);
   const right = useJsonDocument("right", EMPTY_JSON_INPUT);
   const setLeftInput = left.setInput;
@@ -44,23 +44,6 @@ export const JsonWorkbench = () => {
   const showComparison = comparisonPair !== null && !isComparisonStale && left.valid && right.valid;
   const visibleLeftDiffIndex = showComparison ? leftDiffIndex : EMPTY_DIFF_INDEX;
   const visibleRightDiffIndex = showComparison ? rightDiffIndex : EMPTY_DIFF_INDEX;
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
-
-  useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    const nextTheme: ThemeMode = storedTheme === "light" ? "light" : "dark";
-
-    const timeoutId = window.setTimeout(() => {
-      setTheme(nextTheme);
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -158,16 +141,6 @@ export const JsonWorkbench = () => {
     showToast("Panels compared.", "success");
   };
 
-  const handleThemeToggle = () => {
-    setTheme((current) => {
-      const nextTheme: ThemeMode = current === "dark" ? "light" : "dark";
-
-      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-
-      return nextTheme;
-    });
-  };
-
   return (
     <main className="h-screen overflow-hidden bg-background p-8 max-[900px]:h-auto max-[900px]:overflow-visible max-[720px]:p-4">
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col text-base">
@@ -180,7 +153,7 @@ export const JsonWorkbench = () => {
             ) : null}
           </div>
 
-          <JsonThemeToggle theme={theme} onToggle={handleThemeToggle} />
+          <JsonThemeToggle theme={theme} onToggle={toggleTheme} />
         </section>
 
         <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_180px_minmax(0,1fr)] items-stretch gap-4 max-[900px]:grid-cols-1">
