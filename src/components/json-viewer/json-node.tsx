@@ -1,8 +1,8 @@
 import { memo, useMemo } from "react";
 import {
-  type DiffIndex,
   getPathLabel,
   splitMatches,
+  type DiffIndex,
   type JsonNodeRecord,
   type SearchIndex,
   type SearchState,
@@ -10,10 +10,12 @@ import {
 } from "@/lib/json-viewer";
 
 type JsonNodeProps = {
+  activeMatchId: string | null;
   collapsedIds: Set<string>;
   diffIndex: DiffIndex;
-  node: JsonNodeRecord;
+  node: JsonNodeRecord | null;
   onCopyNode: (path: string) => void;
+  onShowMore: (path: string) => void;
   onTogglePath: (path: string) => void;
   row: VisibleTreeRow;
   searchIndex: SearchIndex;
@@ -22,21 +24,46 @@ type JsonNodeProps = {
 
 export const JsonNode = memo(
   ({
+    activeMatchId,
     collapsedIds,
     diffIndex,
     node,
     onCopyNode,
+    onShowMore,
     onTogglePath,
     row,
     searchIndex,
     searchState,
   }: JsonNodeProps) => {
+    if (row.kind === "show-more") {
+      return (
+        <div
+          className="group relative flex min-h-[32px] items-center gap-3 border-l-2 border-transparent px-4 py-1 font-mono text-[15px] leading-6 hover:bg-hover-panel"
+          style={{ paddingLeft: `${row.depth * 18 + 16}px` }}
+        >
+          <Guide depth={row.depth} />
+          <button
+            type="button"
+            className="rounded-[4px] border border-border-default bg-panel px-2 py-0.5 text-[12px] uppercase tracking-[0.12em] text-muted hover:border-accent-border hover:text-accent"
+            onClick={() => onShowMore(row.parentId)}
+          >
+            Show {row.remainingChildCount} more
+          </button>
+        </div>
+      );
+    }
+
+    if (!node) {
+      return null;
+    }
+
     const isCollapsed = collapsedIds.has(node.id);
     const isRoot = node.parentId === null;
     const hasSearch = searchState.query.length > 0;
     const nodeMatch = searchIndex.directMatchIds.has(node.id);
     const descendantMatch = searchIndex.ancestorMatchIds.has(node.id);
     const shouldShowContext = hasSearch && !nodeMatch && descendantMatch;
+    const isActiveMatch = activeMatchId === node.id;
     const nodeChanged = diffIndex.changedIds.has(node.id);
     const ancestorChanged = diffIndex.ancestorIds.has(node.id);
     const isClosingRow = row.kind === "closing";
@@ -47,6 +74,7 @@ export const JsonNode = memo(
       shouldShowContext ? "border-l-accent-border bg-accent-subtle" : "",
       nodeChanged ? "border-l-warn bg-warn-panel" : "",
       ancestorChanged && !nodeChanged ? "border-l-warn-border bg-warn-subtle" : "",
+      isActiveMatch ? "outline outline-1 outline-accent outline-offset-[-1px]" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -80,7 +108,7 @@ export const JsonNode = memo(
         {isExpandable && !isEmptyContainer && (
           <button
             type="button"
-            className="absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded border border-border-default bg-panel text-token-punctuation opacity-0 transition-opacity group-hover:opacity-100 hover:border-accent-border hover:text-accent"
+            className="absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-[4px] border border-border-default bg-panel text-token-punctuation opacity-0 transition-opacity group-hover:opacity-100 hover:border-accent-border hover:text-accent"
             style={{ left: `${keyIndent + 4}px` }}
             onClick={() => onTogglePath(node.id)}
             aria-label={isCollapsed ? "Expand node" : "Collapse node"}
@@ -127,7 +155,7 @@ export const JsonNode = memo(
         {!isRoot && (
           <button
             type="button"
-            className="ml-2 rounded border border-border-default px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:border-accent-border hover:text-accent"
+            className="ml-2 rounded-[4px] border border-border-default px-2 py-0.5 text-[11px] uppercase tracking-[0.2em] text-muted opacity-0 transition-opacity group-hover:opacity-100 hover:border-accent-border hover:text-accent"
             onClick={() => onCopyNode(node.path)}
             aria-label={`Copy ${getPathLabel(node.path)}`}
           >
@@ -165,7 +193,7 @@ const HighlightedText = memo(
           part.match ? (
             <mark
               key={`${part.value}-${index}`}
-              className="rounded bg-accent-soft px-0.5 text-accent"
+              className="rounded-[3px] bg-accent-soft px-0.5 text-accent"
             >
               {part.value}
             </mark>
@@ -225,9 +253,14 @@ type GuideProps = {
 
 const Guide = ({ depth }: GuideProps) =>
   depth > 0 ? (
-    <span
-      aria-hidden
-      className="absolute left-0 top-1 bottom-1 border-l border-guide"
-      style={{ left: `${depth * 18 + 26}px` }}
-    />
+    <>
+      {Array.from({ length: depth }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden
+          className="absolute top-1 bottom-1 border-l border-guide"
+          style={{ left: `${index * 18 + 26}px` }}
+        />
+      ))}
+    </>
   ) : null;

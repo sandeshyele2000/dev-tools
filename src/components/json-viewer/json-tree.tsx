@@ -6,7 +6,6 @@ import {
   buildVisibleTreeRows,
   type DiffIndex,
   type JsonGraph,
-  type JsonNodeRecord,
   type SearchIndex,
   type SearchState,
   type VisibleTreeRow,
@@ -16,28 +15,54 @@ const OVERSCAN_ROWS = 12;
 const ROW_HEIGHT = 32;
 const VIRTUALIZATION_THRESHOLD = 250;
 
+const getRowKey = (row: VisibleTreeRow) =>
+  row.kind === "show-more" ? row.id : `${row.id}:${row.kind}`;
+
 type JsonTreeProps = {
+  activeMatchId: string | null;
   collapsedIds: Set<string>;
   diffIndex: DiffIndex;
   graph: JsonGraph;
+  isHeavy: boolean;
   onCopyNode: (path: string) => void;
+  onShowMore: (path: string) => void;
   onTogglePath: (path: string) => void;
-  searchState: SearchState;
   searchIndex: SearchIndex;
+  searchState: SearchState;
+  visibleChildCountById: Record<string, number>;
 };
 
 export const JsonTree = ({
+  activeMatchId,
   collapsedIds,
   diffIndex,
   graph,
+  isHeavy,
   onCopyNode,
+  onShowMore,
   onTogglePath,
-  searchState,
   searchIndex,
+  searchState,
+  visibleChildCountById,
 }: JsonTreeProps) => {
   const rows = useMemo(
-    () => buildVisibleTreeRows(graph, collapsedIds, searchIndex, searchState),
-    [collapsedIds, graph, searchIndex, searchState],
+    () =>
+      buildVisibleTreeRows(
+        graph,
+        collapsedIds,
+        searchIndex,
+        searchState,
+        visibleChildCountById,
+        isHeavy,
+      ),
+    [collapsedIds, graph, isHeavy, searchIndex, searchState, visibleChildCountById],
+  );
+  const activeMatchRowIndex = useMemo(
+    () =>
+      activeMatchId
+        ? rows.findIndex((row) => row.kind === "node" && row.id === activeMatchId)
+        : -1,
+    [activeMatchId, rows],
   );
   const shouldVirtualize = rows.length > VIRTUALIZATION_THRESHOLD;
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -67,6 +92,27 @@ export const JsonTree = ({
       resizeObserver.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    const element = containerRef.current;
+
+    if (!element || activeMatchRowIndex < 0) {
+      return;
+    }
+
+    const rowTop = activeMatchRowIndex * ROW_HEIGHT;
+    const rowBottom = rowTop + ROW_HEIGHT;
+    const viewportBottom = scrollTop + viewportHeight;
+
+    if (rowTop < scrollTop) {
+      element.scrollTop = rowTop;
+      return;
+    }
+
+    if (rowBottom > viewportBottom) {
+      element.scrollTop = Math.max(0, rowBottom - viewportHeight);
+    }
+  }, [activeMatchRowIndex, scrollTop, viewportHeight]);
 
   const startIndex = shouldVirtualize
     ? Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN_ROWS)
@@ -101,11 +147,13 @@ export const JsonTree = ({
           >
             {visibleRows.map((row) => (
               <TreeRow
-                key={row.id}
+                key={getRowKey(row)}
+                activeMatchId={activeMatchId}
                 collapsedIds={collapsedIds}
                 diffIndex={diffIndex}
                 graph={graph}
                 onCopyNode={onCopyNode}
+                onShowMore={onShowMore}
                 onTogglePath={onTogglePath}
                 row={row}
                 searchIndex={searchIndex}
@@ -117,11 +165,13 @@ export const JsonTree = ({
       ) : (
         visibleRows.map((row) => (
           <TreeRow
-            key={row.id}
+            key={getRowKey(row)}
+            activeMatchId={activeMatchId}
             collapsedIds={collapsedIds}
             diffIndex={diffIndex}
             graph={graph}
             onCopyNode={onCopyNode}
+            onShowMore={onShowMore}
             onTogglePath={onTogglePath}
             row={row}
             searchIndex={searchIndex}
@@ -134,10 +184,12 @@ export const JsonTree = ({
 };
 
 type TreeRowProps = {
+  activeMatchId: string | null;
   collapsedIds: Set<string>;
   diffIndex: DiffIndex;
   graph: JsonGraph;
   onCopyNode: (path: string) => void;
+  onShowMore: (path: string) => void;
   onTogglePath: (path: string) => void;
   row: VisibleTreeRow;
   searchIndex: SearchIndex;
@@ -146,27 +198,27 @@ type TreeRowProps = {
 
 const TreeRow = memo(
   ({
+    activeMatchId,
     collapsedIds,
     diffIndex,
     graph,
     onCopyNode,
+    onShowMore,
     onTogglePath,
     row,
     searchIndex,
     searchState,
   }: TreeRowProps) => {
-    const node = graph.nodeById.get(row.id) as JsonNodeRecord | undefined;
-
-    if (!node) {
-      return null;
-    }
+    const node = row.kind === "show-more" ? null : graph.nodeById[row.id];
 
     return (
       <JsonNode
+        activeMatchId={activeMatchId}
         collapsedIds={collapsedIds}
         diffIndex={diffIndex}
         node={node}
         onCopyNode={onCopyNode}
+        onShowMore={onShowMore}
         onTogglePath={onTogglePath}
         row={row}
         searchIndex={searchIndex}

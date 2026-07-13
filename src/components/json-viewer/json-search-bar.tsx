@@ -1,45 +1,42 @@
 type JsonSearchBarProps = {
-  mode: "text" | "path";
-  query: string;
-  onModeChange: (mode: "text" | "path") => void;
-  onQueryChange: (value: string) => void;
-  matchCount: number;
+  activeMatchNumber: number;
   isBusy: boolean;
+  matchCount: number;
+  mode: "text" | "path";
+  onModeChange: (mode: "text" | "path") => void;
+  onNextMatch: () => void;
+  onPreviousMatch: () => void;
+  onQueryChange: (value: string) => void;
+  query: string;
 };
 
 export const JsonSearchBar = ({
-  mode,
-  query,
-  onModeChange,
-  onQueryChange,
-  matchCount,
+  activeMatchNumber,
   isBusy,
+  matchCount,
+  mode,
+  onModeChange,
+  onNextMatch,
+  onPreviousMatch,
+  onQueryChange,
+  query,
 }: JsonSearchBarProps) => {
   const buttonClassName = (active: boolean) =>
     [
-      "border border-border-default bg-background px-3 py-2 text-foreground",
+      "rounded-[4px] border border-border-default bg-background px-3 py-2 text-foreground disabled:cursor-not-allowed disabled:text-muted",
       active ? "border-accent-border text-accent" : "hover:border-accent-border hover:text-accent",
     ].join(" ");
+  const matchStatus = isBusy
+    ? "Searching..."
+    : matchCount > 0
+      ? `${activeMatchNumber} / ${matchCount}`
+      : query.trim()
+        ? "No matches"
+        : "Search";
 
   return (
-    <div className="border border-x-0 border-b-0 border-border-default bg-panel text-base">
-      <div className="flex items-start justify-between gap-4 border-b border-b-border-default p-4">
-        <div>
-          <p className="mb-1.5 font-display text-xs uppercase tracking-[0.08em] text-muted">
-            Tree search
-          </p>
-          <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-foreground">
-            Search and inspect
-          </h2>
-        </div>
-        <span className="whitespace-nowrap border border-border-default bg-background px-[10px] py-[6px] font-display tracking-[0.02em] text-foreground">
-          {isBusy
-            ? "Searching"
-            : `${matchCount} match${matchCount === 1 ? "" : "es"}`}
-        </span>
-      </div>
-
-      <div className="flex gap-2 p-4">
+    <div className="border border-x-0 border-border-default bg-panel text-base">
+      <div className="flex flex-wrap items-center gap-2 border-b-border-default p-4">
         <button
           type="button"
           className={buttonClassName(mode === "text")}
@@ -54,6 +51,23 @@ export const JsonSearchBar = ({
         >
           Path mode
         </button>
+        <button
+          type="button"
+          className={buttonClassName(false)}
+          onClick={onPreviousMatch}
+          disabled={matchCount === 0}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          className={buttonClassName(false)}
+          onClick={onNextMatch}
+          disabled={matchCount === 0}
+        >
+          Next
+        </button>
+        <span className="ml-auto text-sm text-muted">{matchStatus}</span>
       </div>
 
       <input
@@ -63,7 +77,7 @@ export const JsonSearchBar = ({
         onChange={(event) => onQueryChange(event.target.value)}
         placeholder={
           mode === "text"
-            ? "Search keys or values"
+            ? "Search keys or primitive values"
             : "Search paths like users[0].profile.name"
         }
       />
